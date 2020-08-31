@@ -1,6 +1,6 @@
 # Table of contents
 
-* [Linux Tutorial](README.md)
+* [my-way-to-Linux](README.md)
 
 ## question-encountered
 

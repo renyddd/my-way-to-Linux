@@ -2,7 +2,7 @@
 description: Linux 的学习记录
 ---
 
-# Linux Tutorial
+# my-way-to-Linux
 
 此文将遵循一定的格式进行展开，每小节将由以下主要部分组成（有待完善）：
 
