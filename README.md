@@ -16,3 +16,5 @@ description: Linux 的学习记录
 
 此刻广度已经差不多了，你是时候该深入一个方向好好研究了。对于现在你的应届生身份来说，在某一领域研究的深度就是对你学习能力的一种证明。同时对 Linux 的学习你也不要仅仅是停留在会操作的层面上，该深入的时候就要深入进去。某方面你学没学明白的验证，就是你能否对别人讲解清楚。提醒自己多少遍都不嫌多，基础很重要！
 
+## helpful links
+- [golang notes](https://github.com/renyddd/golang) and the nowcoder part.
