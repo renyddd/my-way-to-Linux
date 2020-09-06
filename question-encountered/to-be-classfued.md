@@ -156,6 +156,14 @@ dig +trace www.baidu.com
 
 ## https 以及 CA 认证？
 
+
+
+
+
+# 集线器、交换机和路由器的区别？
+
+https://www.cnblogs.com/hnrainll/archive/2011/09/21/2183743.html
+
 ## 进程在什么情况下会进入到内核态？
 
 用户态的进程所能访问的资源受限，必须通过系统调用陷入到内核中，才能访问这些核心资源。
@@ -177,6 +185,10 @@ dig +trace www.baidu.com
 
 
 ## 对 nginx 返回的错误码完成统计排序？
+
+
+
+## http 协议状态返回码
 
 1xx：100-101，信息提示 2xx：200-206，成功 3xx：300-305，重定向 4xx：400-415，错误类信息，客户端错误 5xx：500-505，错误类信息，服务器端错误
 
@@ -409,17 +421,85 @@ ramdisk 部分待续；
 
 [参考 - 极客时间趣谈Linux操作系统](https://time.geekbang.org/column/article/90109)
 
-## C 中的问题
+
+
+# C 中的问题
+
+## 各种 sizeof
+
+有如下程序代码：
 
 ```c
-char *a  "aaa"
+#include <stdio.h>
+#include <string.h>
 
-strlen(a)
+int main() {
+    char* a = "aaa";
 
-sizeof(a)
+    printf("%ld\n", strlen(a));
+    printf("%ld\n", sizeof(a));
+    printf("%ld\n", sizeof(char*));
+    /*
+3
+8
+8
+    */
+    
+    printf("\n======\n");
+
+    char str[] = "hello!";
+    printf("%ld\n", strlen(str));
+    printf("%ld\n", sizeof(str));
+
+    const char* ch = str;
+    printf("%ld\n", sizeof(ch));
+    /*
+6
+7
+8
+    */
+
+    printf("\n======\n");
+
+    char src[3];
+    strcpy(src, "abcde");
+    printf("%ld\n", strlen(src));
+    printf("%ld\n", sizeof(src));
+    printf("%c\n", src[4]);
+    /*
+5
+3
+e
+    */
+    
+	/*
+test.c:24:5: warning: ‘__builtin_memcpy’ writing 6 bytes into
+ a region of size 3 overflows the destination [-Wstringop-ove
+rflow=]
+   24 |     strcpy(src, "abcde");
+      |     ^~~~~~~~~~~~~~~~~~~~
+    */
+
+    return 0;
+}
 ```
 
-volatile 关键字
+解析：
+
+```c
+#include <string.h>
+size_t strlen(const char *s); 
+```
+
+函数 strlen 计算 s 所指向的字符串的长度，**不包括**其结束标记`\0`；返回值为 s 指向的字符串的字节数。
+
+`sizeof`是**运算符**，
+
+C 语言对内存的限制为什么？
+
+## volatile 关键字
+
+
 
 # 在 C 中的单例情况下使用多线程，会发生什么问题？又该如何上锁呢？
 
