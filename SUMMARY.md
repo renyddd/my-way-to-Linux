@@ -9,5 +9,5 @@
 
 ## question-encountered
 
-* [Questions](question-encountered/to-be-classfued.md)
-* [Questions](question-encountered/meetInnowcoder.md)
+* [Long_Questions](question-encountered/to-be-classfued.md)
+* [Short_Questions](question-encountered/meetInnowcoder.md)
