@@ -50,6 +50,27 @@ Linux 中无论是进程还是线程，在内核里都被统称为任务（Task�
 
 [参考 - 极客时间趣谈Linux操作系统](https://time.geekbang.org/column/article/94926)
 
+todo：进程、虚拟内存全部根据 cs 书进行补充
+
+## Numa 非统一内存访问架构
+Non-Uniform Memory Access，是为多处理器的电脑设计的非统一内存访问架构（描述了多处理器系统中主存模块相对于处理器的位置），内存的访问时间时依赖于处理器和内存之间的相对位置。这里的设计存在和处理器相对较近的内存，被称为本地内存；和相对较远的非本地内存。
+
+一个 Numa Node 是由一个物理 cpu 和其本地内存组成（表示一组资源），如下命令：
+```bash
+~$ numastat
+                           node0
+numa_hit              5648809546
+numa_miss                      0
+numa_foreign                   0
+interleave_hit             25434
+local_node            5648809546
+other_node                     0
+```
+ref: 
+- [https://www.cnblogs.com/smlie/p/11546478.html](https://www.cnblogs.com/smlie/p/11546478.html)
+- [http://www.sukihiro.cn/2020/03/25/numa-os-part1/](http://www.sukihiro.cn/2020/03/25/numa-os-part1/)
+
+
 ## 进程间通信方式？
 
 ### 管道
@@ -160,7 +181,7 @@ dig +trace www.baidu.com
 
 
 
-# 集线器、交换机和路由器的区别？
+## 集线器、交换机和路由器的区别？
 
 https://www.cnblogs.com/hnrainll/archive/2011/09/21/2183743.html
 
@@ -172,29 +193,45 @@ https://www.cnblogs.com/hnrainll/archive/2011/09/21/2183743.html
 
 不过在系统调用中所发生的与进程上下文切换不同，进程上下文切换是指从一个进程切换到另一个进程；而系统调用过程中一直是同一个进程在运行，也通常称为特权模式切换。
 
+todo: 特权模式切换
 
 
-# 僵死进程如何产生？又该如何处理？
-
-
-
-
-
-# 僵尸进程？孤儿进程？
-
-
-
-## 对 nginx 返回的错误码完成统计排序？
-
-
+## 僵尸进程与孤儿进程
+### 僵尸进程
+那些已死但没有被回收的进程。
+正常情况下将由父进程通过 wait 系统调用进行会后，若长时间保持大量僵尸进程将导致 resource leak（系统的 pid 数量有限制）。
+应用：父进程想占用相同的进程号
+子进程死亡后系统并不会立即从内存中删除其进程描述符，系统会发送 SIGCHLD 信号给父进程通知死亡，调用 wait 后才会从内存中完全删除。
+处理：可使用 SIGCHLD 信号
+```bash
+kill -s SIGCHLD PARENT_PID
+```
+若父进程因为编码错误而忽略了 SIGCHLD 信号，在需要杀死僵尸进程的父进程，使 systemd 成为这些僵尸进程的新父进程，sytemd 会定期执行 wait() 调用。
+### 孤儿进程
+Orphan Process，是指在其父进程（创建该进程的进程）执行完成或被终止后仍继续运行的一类进程。
+系统为避免孤儿进程退出时无法释放所占用的资源，systemd 进程会立马接管为其子进程。
+应用：如在 shell 上用户想是该进程与会话脱离，并转至后台运行，nohup 命令；或需要长时间启动的进程，即守护进程 daemon。
 
 ## http 协议状态返回码
 
-1xx：100-101，信息提示 2xx：200-206，成功 3xx：300-305，重定向 4xx：400-415，错误类信息，客户端错误 5xx：500-505，错误类信息，服务器端错误
+- 1xx：100-101，信息提示 
+- 2xx：200-206，成功 
+- 3xx：300-305，重定向 
+- 4xx：400-415，错误类信息，客户端错误 
+- 5xx：500-505，错误类信息，服务器端错误
 
-常用的状态码： 200：成功，请求的所有数据通过响应报文的entity-body 部分发送；OK 301：请求的 URL 指向的资源已经被删除；但在响应报文中通过首部 Location 指明了资源现在所处的新位置；Moved Permanently 302：与 301 相似，但在响应报文中通过 Location 指明资源现在所处临时新位置；Found 304：客户端发出了条件式请求，但服务器上的资源未曾发生改变，则通过响应此响应状态码通知客户端；Not Modified 401：需要输入账号和密码认证方能访问资源；Unauthorized 403：请求被禁止；Forbidden 404：服务器无法找到客户端请求的资源；Not Found 500：服务器内部错误；Internal Server Error 502：代理服务器从后端服务器收到一条伪响应；Bad Gateway
+常用的状态码： 
+- 200：成功，请求的所有数据通过响应报文的 entity-body 部分发送；OK 
+- 301：请求的 URL 指向的资源已经被删除；但在响应报文中通过首部 Location 指明了资源现在所处的新位置；Moved Permanently 
+- 302：与 301 相似，但在响应报文中通过 Location 指明资源现在所处临时新位置；Found 
+- 304：客户端发出了条件式请求，但服务器上的资源未曾发生改变，则通过响应此响应状态码通知客户端；Not Modified
+- 401：需要输入账号和密码认证方能访问资源；Unauthorized 
+- 403：请求被禁止；Forbidden 404：服务器无法找到客户端请求的资源；Not Found 
+- 500：服务器内部错误；Internal Server Error
+- 502：代理服务器从后端服务器收到一条伪响应；Bad Gateway
 
 ## awk 简单使用？
+todo
 
 ## cpu 负载的具体数值是如何计算得出的？
 
@@ -204,13 +241,66 @@ uptime 命令中的过去 1 分钟、5 分钟、15 分钟的平均负载（Load 
 man uptime
 ```
 
-平均负载是指单位时间内系统中处于运行（runnable）状态和不可中断（uninterruptable）状态的平均进程数。
+平均负载是指单位时间内系统中处于运行（runnable）状态和不可中断（uninterruptible）状态的平均进程数。
 
-不可中断状态的进程是正处于内核态关键流程中的进程，这些流程是不可打断的，即为 ps 命令中的 D 状态。
+不可中断状态的进程是正处于内核态关键流程中的进程，这些流程是不可打断的，即为 ps 命令中的 D 状态。（一般表示进程正在跟硬件交互，并且交互过程不允许被其他进程中断。）
 
 lscpu 命令可查得 CPU 个数，最理想的情况是每颗上都运行着一个进程，当平均负载比 CPU 个数还大时，系统就已经出现过载了。
 
+常见的进程状态：
+- R：Running 或 Runnable，表示进程在 cpu 的就绪队列中正在运行或正在等待运行；
+- D：Disk sleep 的缩写，也就是不可中断态 Uninterruptible sleep，表示进程正在跟硬件交互并且该过程不能被打断（不可被内核系统调用的信号所打断）；
+- Z：Zombie 僵尸进程，表示该进程实际上是结束了，但父进程还没有为其回收资源；
+- S：Interruptible sleep，也就是可中断睡眠态，表示进程因为等待某个事件而被系统挂起，当进程等待到事件的发生时就会被唤醒进入 R 状态；
+- I：Idle 空闲状态，发生在不可中断睡眠的内核线程上；
+- T：Stopped 或 Traced，表示进程处于暂停或跟踪状态；
+- X：Dead 表示进程已经消亡，无法在 top 或 ps 中看到。
+
+```bash
+# man ps
+PROCESS STATE CODES
+       Here are the different values that the s, stat and state output specifiers (header "STAT" or "S") will
+       display to describe the state of a process:
+
+               D    uninterruptible sleep (usually IO)
+               R    running or runnable (on run queue)
+               S    interruptible sleep (waiting for an event to complete)
+               T    stopped by job control signal
+               t    stopped by debugger during the tracing
+               W    paging (not valid since the 2.6.xx kernel)
+               X    dead (should never be seen)
+               Z    defunct ("zombie") process, terminated but not reaped by its parent
+
+       For BSD formats and when the stat keyword is used, additional characters may be displayed:
+
+               <    high-priority (not nice to other users)
+               N    low-priority (nice to other users)
+               L    has pages locked into memory (for real-time and custom IO)
+               s    is a session leader
+               l    is multi-threaded (using CLONE_THREAD, like NPTL pthreads do)
+               +    is in the foreground process group
+```
+
 [参考 - Linux 性能优化实战](https://time.geekbang.org/column/article/69859)
+
+[参考第二个回答](https://stackoverflow.com/questions/223644/what-is-an-uninterruptible-process)
+
+当一个进程处在用户态的时候（user mode），他可以在任意时间被 interrupte（切换内核台 kernel mode）。当从内核态返回用户态的时候，将会进行是否有任何待处理信号（例如 SIGTERM, SIGKILL）的检查，这就意味着一个进程只能在返回用户态时被杀掉。
+```bash
+:~$ (sleep 200; cat .gitconfig ) | grep git
+# another
+:~$ ps axu | grep grep
+renyido+ 3034639  0.0  0.0  12784   892 pts/0    S+   11:42   0:00 grep git
+renyido+ 3034648  0.0  0.0  12784   968 pts/1    S+   11:42   0:00 grep grep
+```
+
+**进程无法在内核态下被杀死的原因是，这可能将会破坏同一台计算机上所有进程所使用的内核结构（对于线程 thread 来说也是如此。）**
+
+当内核将做一些可能耗时较长的操作时（例如等待另一个向管道中写数据的进程，或者等待硬件），该程序自身将被标注为睡眠并且通知调度器切换至其他进程。
+
+如果一个信号将要发送至一个 sleeping 的进程，则必须先唤醒它，然后才能返回用户态，从而再处理待处理的信号。下面是两种睡眠态的区别：
+1. TASK_INTERRUPTIBLE: 此标记休眠的任务可通过信号唤醒，你无法避免处于此状态的进程，从硬盘中读写数据总是需要花些时间的。
+2. TASK_UNINTERRUPTIBLE: 不可被唤醒。
 
 ## Linux 下有几种文件打开方式？
 
@@ -220,7 +310,13 @@ mmap
 
 ## 查看进程的资源使用情况？dstat 命令？
 
+## perf 命令
+
 ## KVM 如何进行资源的限制？与 docker 有什么不同？
+todo
+
+## Cgroup v1, v2?
+todo
 
 ## IaaS 与 PaaS 的区别？云计算中用到的虚拟化与容器？
 
@@ -243,7 +339,11 @@ clone\(\) 函数在为我们创建一个新进程的时候，其参数 flags 可
 
 由此看来，用户运行在容器里的应用进程都是在由宿主机操作系统统一管理（同一内核，隔离得不彻底；类似时间就无法被 Namespace 化），只不过这些进程多了额外设置的 Namespace 参数；Docker 扮演的更多是旁路式的辅助和管理工作。
 
-每个进程的 namespace 都在它对应的 /proc/PID/ns 目录下，连接到真实的 namespace 文件上。一个进程也可以选择某个已有进程的 ns 中，这就是 docker exec 的原理。
+每个进程的 namespace 都在它对应的 /proc/PID/ns 目录下，连接到真实的 namespace 文件上。一个进程也可以选择连接至某个已有进程的 ns 中，这就是 docker exec 的原理。
+```bash
+:~$ sudo ls /proc/242/ns/
+cgroup  ipc  mnt  net  pid  pid_for_children  user  uts
+```
 
 ### Linux Control Group
 
@@ -252,7 +352,21 @@ clone\(\) 函数在为我们创建一个新进程的时候，其参数 flags 可
 Cgroups 给用户暴露出来的接口是文件系统，即它以文件和目录的方式组织在操作系统的 /sys/fs/cgroup 路径下。可以通过 mount 命令进行展示：
 
 ```bash
-mount -t cgroup
+:~$ sudo ls /sys/fs/cgroup/
+blkio  cpuacct      cpuset   freezer  net_cls   net_prio    pids
+cpu    cpu,cpuacct  devices  memory   net_cls,net_prio  perf_event  systemd
+
+:~$ mount -t cgroup
+cgroup on /sys/fs/cgroup/systemd type cgroup (rw,nosuid,nodev,noexec,relatime,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd)
+cgroup on /sys/fs/cgroup/net_cls,net_prio type cgroup (rw,nosuid,nodev,noexec,relatime,net_cls,net_prio)
+cgroup on /sys/fs/cgroup/cpu,cpuacct type cgroup (rw,nosuid,nodev,noexec,relatime,cpu,cpuacct)
+cgroup on /sys/fs/cgroup/perf_event type cgroup (rw,nosuid,nodev,noexec,relatime,perf_event)
+cgroup on /sys/fs/cgroup/freezer type cgroup (rw,nosuid,nodev,noexec,relatime,freezer)
+cgroup on /sys/fs/cgroup/pids type cgroup (rw,nosuid,nodev,noexec,relatime,pids)
+cgroup on /sys/fs/cgroup/memory type cgroup (rw,nosuid,nodev,noexec,relatime,memory)
+cgroup on /sys/fs/cgroup/cpuset type cgroup (rw,nosuid,nodev,noexec,relatime,cpuset)
+cgroup on /sys/fs/cgroup/blkio type cgroup (rw,nosuid,nodev,noexec,relatime,blkio)
+cgroup on /sys/fs/cgroup/devices type cgroup (rw,nosuid,nodev,noexec,relatime,devices)
 ```
 
 以查看已运行的 docker 容器为例：
@@ -294,6 +408,9 @@ Docker 项目的核心原理就是为待创建的用户进程：
 [参考 - 极客时间深入剖析 Kubernetes](https://time.geekbang.org/column/article/14642)
 
 ## ping 命令使用到的协议详解？
+todo
+
+ICMP: Internet Control Message Protocol
 
 [https://cloud.tencent.com/developer/article/1656071](https://cloud.tencent.com/developer/article/1656071)
 
@@ -501,7 +618,7 @@ C 语言对内存的限制为什么？
 
 
 
-# 在 C 中的单例情况下使用多线程，会发生什么问题？又该如何上锁呢？
+## 在 C 中的单例情况下使用多线程，会发生什么问题？又该如何上锁呢？
 
 
 
@@ -604,7 +721,7 @@ pattern scanning and processing language
 
 
 
-# rsync, ethtool 命令
+## rsync, ethtool 命令
 
 
 
@@ -661,15 +778,15 @@ A3        A3           A4       A4
 
 
 
-# lsof 的常见使用情景？
+## lsof 的常见使用情景？
 
 man lsof
 
 
 
-# 如何查看某命令使用（或是加载）到的动态库？
+## 如何查看某命令使用（或是加载）到的动态库？
 
 
 
-# keepalived 的协议是？
+## keepalived 的协议是？
 
