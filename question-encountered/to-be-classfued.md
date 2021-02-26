@@ -6,7 +6,7 @@
 
 ## 进程与线程的区别？
 
-任何进程都默认有一个主线程，线程用于执行二进制指令，而进程还要负责处理内存、文件系统、权限等。
+任何进程都默认有一个主线程，线程用于执行二进制指令，而进程还要负责处理内存、文件、权限等。
 
 进程相当于一个项目，而线程就是为了完成项目需求而建立的一个个开发任务。
 
@@ -43,7 +43,9 @@ Linux 中无论是进程还是线程，在内核里都被统称为任务（Task�
 
 每个进程看到的内存都是一致的，称为虚拟地址空间。
 
-地址空间最上面的区域（高地址空间）是保留给内核的，这里对所有进程来说都是一样的。
+地址空间最上面的区域（高地址空间）是保留给内核的，这里对所有进程来说都是一样的（所有进程都有可能调用相同的系统内核代码。）
+
+虚拟内存可以结合磁盘和物理内存的优势，为进程提供看起来速度足够快且容量足够大的存储。[ref](https://draveness.me/whys-the-design-os-virtual-memory/)
 
 ### 布局
 
@@ -80,7 +82,33 @@ comment
 
 todo：进程、虚拟内存全部根据 cs 书进行补充
 
-## 虚拟内存中的堆与数据结构中的区别
+### 虚拟内存中的堆与数据结构中的区别
+[栈的是那种含义](http://www.ruanyifeng.com/blog/2013/11/stack.html)
+1. 数据结构，也就是数据的一种存放方式 LIFO；
+2. 代码运行方式，即调用栈，函数层层存放实现层层调用；
+3. 内存区域，存放数据的一种内存区域，解释如下：
+
+> Stacks in computing architectures are regions of memory where data is added or removed in a last-in-first-out (LIFO) manner.
+
+内存区域的 stack 是有结构的，明确每个区块的大小；而 heap 没有结构，数据可以任意存放，因此 stack 的寻址速度要快于 heap。
+
+> Heap is used for dynamic memory allocation and unlike stack, the program needs to look up the data in heap using pointers (Think of it as a big multi-level library).
+
+每个线程都会分配一个 stack，而每个进程才会分配一个 heap，也就是说 heap 是线程共享的。
+
+
+todo：例如 c 中，int 一个变量与 malloc 一个变量有何区别？在 go 当中呢？
+[ref - part1](https://deepu.tech/memory-management-in-programming/)
+[ref - part2](https://deepu.tech/memory-management-in-golang/)
+
+## goroutines
+[effective go](https://golang.org/doc/effective_go#goroutines)
+一个 goroutine 是一个轻量级的模型，它是在相同地址空间上与其它 goroutines 并发执行的函数。它的消耗仅比分配栈空间要多一点，初始的栈很少量并且可增长，有需要便会分配堆。
+
+goroutines 是被多路复用到少量的 os 线程上的，而不是一比一映射（被 go runtime 所管理。）
+
+go 中函数的 literal 就是闭包 closure，这确保了闭包中引用到的变量将持久存活：
+> In Go, function literals are closures: the implementation makes sure the variables referred to by the function survive as long as they are active.
 
 
 ## Numa 非统一内存访问架构
@@ -100,6 +128,18 @@ other_node                     0
 ref: 
 - [https://www.cnblogs.com/smlie/p/11546478.html](https://www.cnblogs.com/smlie/p/11546478.html)
 - [http://www.sukihiro.cn/2020/03/25/numa-os-part1/](http://www.sukihiro.cn/2020/03/25/numa-os-part1/)
+
+内存架构演进图[ref](https://lwn.net/Articles/250967/)
+![nsbridge](https://static.lwn.net/images/cpumemory/cpumemory.4.png)
+
+所有 cpu 通过公共总线连接到北桥，北桥还包含内存控制器，北桥必须与南桥通信，南桥亦称为 I/O 桥。需要注意如下：
+- 多个 cpu 间的数据必须必须经过北桥的同一总线；
+- 与 RAM 的通信必须通过北桥；
+- cpu 与连接到南桥的设备的通信必须有北桥路由。
+
+![Integrated Memory controlelr](https://static.lwn.net/images/cpumemory/cpumemory.6.png)
+
+如上，是将内存控制器集成到 cpu 中，并将内存连接到每个 cpu。这种架构也是有缺点的；首先机器还是必须对所有系统内存都是可访问的，因此内存开始不再统一（因此该架构才有了 NUMA 这名字————非统一内存架构。）
 
 
 ## 进程间通信方式？
@@ -220,17 +260,21 @@ https://www.cnblogs.com/hnrainll/archive/2011/09/21/2183743.html
 
 用户态的进程所能访问的资源受限，必须通过系统调用陷入到内核中，才能访问这些核心资源。
 
-从用户态到内核态的转变需要通过系统调用来完成，系统调用时会发生 CPU 上下文的切换。CPU 寄存器里原来用户态的指令位置，需要先保存起来；接着为了执行内核态代码 CPU 寄存器需要更新为内核态指令的新位置，最后才是跳转到内核态运行内核任务。而当系统调用结束后，CPU 寄存器需要恢复原来保存的用户态，然后再切换到用户空间继续用行。所以一次系统调用的过程，其实发生了两次 CPU 上下文切换。
+从用户态到内核态的转变需要通过系统调用来完成，系统调用时会发生 CPU 上下文的切换。CPU 寄存器里原来用户态的指令位置，需要先保存起来；接着为了执行内核态代码 CPU 寄存器需要更新为内核态指令的新位置，最后才是跳转到内核态运行内核任务。
+
+（注意：当进程执行系统调用陷入内核态之后，这些内核代码所使用的栈并不是原先再用户空间当中的，而是一个内核空间的栈，称作进程的**内核栈**）
+进程从用户空间进入内核空间时，特权级发生变化，需要切换堆栈空间，内核空间中所使用的就称为内核栈。
+
+而当系统调用结束后，CPU 寄存器需要恢复原来保存的用户态，然后再切换到用户空间继续用行。所以一次系统调用的过程，其实发生了两次 CPU 上下文切换。
 
 不过在系统调用中所发生的与进程上下文切换不同，进程上下文切换是指从一个进程切换到另一个进程；而系统调用过程中一直是同一个进程在运行，也通常称为特权模式切换。
 
-todo: 特权模式切换
-
+todo: 特权模式切换 [ref](https://www.cnblogs.com/gtarcoder/articles/5278074.html)
 
 ## 僵尸进程与孤儿进程
 ### 僵尸进程
 那些已死但没有被回收的进程。
-正常情况下将由父进程通过 wait 系统调用进行会后，若长时间保持大量僵尸进程将导致 resource leak（系统的 pid 数量有限制）。
+正常情况下将由父进程通过 wait 系统调用进行回收，若长时间保持大量僵尸进程将导致 resource leak（系统的 pid 数量有限制）。
 应用：父进程想占用相同的进程号
 子进程死亡后系统并不会立即从内存中删除其进程描述符，系统会发送 SIGCHLD 信号给父进程通知死亡，调用 wait 后才会从内存中完全删除。
 处理：可使用 SIGCHLD 信号
@@ -273,6 +317,11 @@ man uptime
 ```
 
 平均负载是指单位时间内系统中处于运行（runnable）状态和不可中断（uninterruptible）状态的平均进程数。
+
+如下命令结合 htop 和容仪观测到，所有 cpu 将渐渐被打满：
+```bash
+while true; do dd if=/dev/zero of=/dev/null & sleep 10; done
+```
 
 不可中断状态的进程是正处于内核态关键流程中的进程，这些流程是不可打断的，即为 ps 命令中的 D 状态。（一般表示进程正在跟硬件交互，并且交互过程不允许被其他进程中断。）
 
@@ -325,6 +374,8 @@ renyido+ 3034639  0.0  0.0  12784   892 pts/0    S+   11:42   0:00 grep git
 renyido+ 3034648  0.0  0.0  12784   968 pts/1    S+   11:42   0:00 grep grep
 ```
 
+[how-can-i-put-process-into-uninterruptible-sleep](https://stackoverflow.com/questions/12304183/how-can-i-put-process-into-uninterruptible-sleep)
+
 **进程无法在内核态下被杀死的原因是，这可能将会破坏同一台计算机上所有进程所使用的内核结构（对于线程 thread 来说也是如此。）**
 
 当内核将做一些可能耗时较长的操作时（例如等待另一个向管道中写数据的进程，或者等待硬件），该程序自身将被标注为睡眠并且通知调度器切换至其他进程。
@@ -332,6 +383,10 @@ renyido+ 3034648  0.0  0.0  12784   968 pts/1    S+   11:42   0:00 grep grep
 如果一个信号将要发送至一个 sleeping 的进程，则必须先唤醒它，然后才能返回用户态，从而再处理待处理的信号。下面是两种睡眠态的区别：
 1. TASK_INTERRUPTIBLE: 此标记休眠的任务可通过信号唤醒，你无法避免处于此状态的进程，从硬盘中读写数据总是需要花些时间的。
 2. TASK_UNINTERRUPTIBLE: 不可被唤醒。
+
+## cpu 调度算法 - run queue
+todo
+
 
 ## Linux 下有几种文件打开方式？
 
@@ -348,10 +403,31 @@ todo
 
 ## Cgroup v1, v2?
 todo
+[https://chrisdown.name/talks/cgroupv2/cgroupv2-fosdem.pdf](https://chrisdown.name/talks/cgroupv2/cgroupv2-fosdem.pdf)
+
+关注：
+1. How did this work in cgroupv1?
+
+https://blog.csdn.net/juS3Ve/article/details/78566714
+https://www.lijiaocn.com/%E6%8A%80%E5%B7%A7/2019/01/28/linux-tool-cgroup-detail.html
 
 ## 存储驱动 overlay2
 
-## containerd
+[how-the-overlay2-driver-works](https://docs.docker.com/storage/storagedriver/overlayfs-driver/#how-the-overlay2-driver-works)
+
+overlay 的不同层 layers 在 Linux 主机上表现为不同的目录，整个的统一过程可称为 union mount。底层目录称为 lowerdir，对应的 upperdir 和联合层 merged。
+
+
+## containerd withrunc
+[https://www.inovex.de/blog/containers-docker-containerd-nabla-kata-firecracker/](https://www.inovex.de/blog/containers-docker-containerd-nabla-kata-firecracker/)
+
+[https://stackoverflow.com/questions/41645665/how-containerd-compares-to-runc](https://stackoverflow.com/questions/41645665/how-containerd-compares-to-runc)
+
+1. containerd 是容器运行时，可管理整个容器的生命周期，从镜像的拉取到容器的执行、监控等；
+2. container-shim 处理 headless 容器，这意味着一但 runc 完成了对容器的初始化便会退出，转由 container-shim 控制，充当一种中间人的角色；
+3. runc 是一种统一的轻量级容器运行时，有 OCI（
+Open Container Initiative）维护规范，containerd 就使用 runc 来产生与运行容器；
+4. grpc 用于 containerd 和 docker-engine 间的通信；
 
 ## IaaS 与 PaaS 的区别？云计算中用到的虚拟化与容器？
 
@@ -380,7 +456,7 @@ clone\(\) 函数在为我们创建一个新进程的时候，其参数 flags 可
 cgroup  ipc  mnt  net  pid  pid_for_children  user  uts
 ```
 
-### Linux Control Group
+## Linux Control Group
 
 主要作用为限制一个进程组能够使用的资源上限，包括 CPU、内存、磁盘、网络带宽等等。
 
@@ -442,13 +518,51 @@ Docker 项目的核心原理就是为待创建的用户进程：
 
 [参考 - 极客时间深入剖析 Kubernetes](https://time.geekbang.org/column/article/14642)
 
+## 容器 vs VM
+VM 中的用户应用对宿主机操作系统的调用都会被虚拟化程序所拦截处理，这就多了一层消耗。
+
+## 理解 Pod
+Pod 扮演的是传统部署环境里的“虚拟机”的角色（进程是以组的形势运行的）。再把容器看作是运行在这个“机器”里的用户程序，凡是调度、网络、存储的事情进本都是 Pod 级别的。因此凡是跟容器的 Namespace 相关的属性，一定也是 Pod 级别的。
+
+若使用例如 deployment 控制器的话，其中 template 字段的内容与一个标准的 Pod 对应的 API 定义丝毫不差。
+
+[极客时间 - 深入剖析 Kubernetes](https://time.geekbang.org/column/article/40583)
+
 ## k8s pod 的生命周期
 [kubernetes.io](https://kubernetes.io/zh/docs/concepts/workloads/pods/pod-lifecycle/)
 
+[DZone - Birth of a Pod](https://dzone.com/articles/kubernetes-lifecycle-of-a-pod)
+
+![pic](https://cdn-images-1.medium.com/max/1500/1*WDJmiyarVfcsDp6X1-lLFQ.png)
+
+导致 Pod 诞生的一系列事件：
+
+1. kubectl 或者其他任意的 API 客户端向 API server 提交 Pod spec；
+2. API server 将该 Pod object 写入 etcd；一旦写入成功，etcd 将会向 API server 发回认可；
+3. API server 反应 etcd 中的状态变化；
+4. 所有 k8s 组件都通过 watch 持续监视 API server 相关的变更；
+5. kube-scheduler 通过他的 watcher 发觉还有一个新的 Pod 还没有绑定任何节点；
+6. kube-scheduler 为该 Pod 分配一个 Node 并且更新 API server；
+7. 这个更改将会传给 etcd，API server 还会将这个节点的分配，反映到 Pod 对象中；
+8. 每个 node 上都有 watcher 在监视 API server，因此目标节点监视到有一个新 Pod 被分配过来了；
+9. Kubelet 运行容器并且向 API server 更新其状态；
+10. API server 将该 Pod 持久化存储至 etcd；
+11. 一旦 etcd 反馈写入成功，API server 便将该认可发送给 kubelet，表明这个事件已被接受。
+
+[raft - Understandable Distributed Consensus](http://thesecretlivesofdata.com/)
 
 
 ## kubelet 作用整理
+[ref - kubenetes.io](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kubelet/)
 
+Kubelet 是每个节点上运行的主要 node agent，并负责向 API Server 注册该节点。
+Kubelet 通过一段描述 Pod 的 Json 或 Yaml 的 PodSpec 来工作，kubelet 接受一组 API Server 下发的 PodSpec 并且确保这些 spec 中描述的容器健康的运行。
+
+in-action 整理：
+1. 向 API server 创建 Node 资源并注册该节点；
+2. 持续监控 API server 是否该节点分配给 Pod 然后启动 Pod 容器；
+3. 监控容器运行，持续报告状态、事件；
+4. 运行容器存活探针的组件，并且将负责重启容器。
 
 ## ping 命令使用到的协议详解？
 todo
