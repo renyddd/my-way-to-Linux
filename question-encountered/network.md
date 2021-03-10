@@ -159,6 +159,211 @@ tcp 包头：
 
 
 
+## ipv6
+[wiki](https://zh.wikipedia.org/wiki/IPv6)
+NAT 与 CIDR 可以缓解 ipv4 匮乏的现象。
+> ipv6 二进制下为 128 位长度，以 16 位为一组，每组以冒号 ':' 分开，可以分为 8 组，每组以 4 位十六进制方式表示。
+例如：2001:0db8:86a3:08d3:1319:8a2e:0370:7344 就是一个合法的 ipv6 地址。
+
+## 路由协议
+[ref](https://community.fs.com/blog/ospf-vs-bgp-routing-protocol-choice.html#:~:text=The%20main%20difference%20between%20OSPF,routing%20operations%20performed%20between%20two)
+> Both OSPF (Open Shortest Path First) and BGP (Border Gateway Protocol) are routing protocols that make routing decisions across the Internet. 
+
+## JSON
+[wiki](https://zh.wikipedia.org/wiki/JSON)
+> JavaScript Object Notation，JavaScript 对象表示法。轻量级的资料交换语言，用来传输由属性值或序列性值（array）组成的数据对象。JSON 是独立于语言的文本格式。
+1. 数值；
+2. 字符串；
+3. 布尔值；
+4. array；
+5. 对象 object；
+6. null。
+
+## protobuf
+[https://developers.google.com/protocol-buffers](https://developers.google.com/protocol-buffers)
+> Protocol buffers 是一种语言无关、平台无关的可扩展机制，用于序列化结构化数据——就像 xml 不过更小更快更简单。你仅定义一次数据被结构化的方法，就可以特殊的生成源码来从不同的数据流成读出或写入了。
+
+## gprc
+[wiki](https://zh.wikipedia.org/wiki/GRPC)
+gRPC Remote Procedure Calls 是谷歌发起的一个开源远程过程调用系统，基于 HTTP/2 协议传输，使用 Protobuf 作为借口描述语言。
+常见使用场景：
+- 微服务框架下，多种语言服务之间的高效交互；
+
+架构： client <-> gRPC Server <-> client
+
+### Remote Procedure Call
+[wiki](https://zh.wikipedia.org/wiki/%E9%81%A0%E7%A8%8B%E9%81%8E%E7%A8%8B%E8%AA%BF%E7%94%A8)
+> 远程过程调用，是一个计算机的通信协议。该协议允许一台计算机上的程序调用另一个地址空间（commonly on another computer on a shared network）的子进程，而程序员就像调用本地程序一样，无需额外的为这个交互坐编程。也是一种 Client/Server 模式。
+
+[ref- https://www.cnblogs.com/takumicx/p/10059448.html](https://www.cnblogs.com/takumicx/p/10059448.html)
+> 对分布式系统而言，不同的服务可能分布在不同的节点之上，一个服务要完成自己的功能需要调用其他服务的接口，一种是采用 http 请求的方式，另一种是 rpc 的方式，让我们可以像调用本地接口一样使用远程服务。
+
+## Transport Layer Security (TLS) 
+[wiki](https://zh.wikipedia.org/wiki/%E5%82%B3%E8%BC%B8%E5%B1%A4%E5%AE%89%E5%85%A8%E6%80%A7%E5%8D%94%E5%AE%9A)
+
+[https://www.ruanyifeng.com/blog/2014/02/ssl_tls.html](https://www.ruanyifeng.com/blog/2014/02/ssl_tls.html)
+
+不使用 ssl/tls 的 http 通信都是非加密，直接使用明文进行通信的。
+tls 希望达到：
+1. 所有信息都是加密传播，第三方无法窃听；
+2. 具有校验机制，一旦被篡改，通信双方都会发现；
+3. 配备身份证书，防止身份被冒充。
+
+1996 年 NetSpace 的 SSL 3.0 得到应用；99 年标准化组织发布 ssl 的升级 TLS 1.0 版本。
+
+**基本思路：**TLS 采用公钥加密，也就是说客户端先要向服务器所要公钥，然后用公钥加密信息，服务器收到密文后用自己的私钥进行解密。
+**要解决的两个问题：**
+1. 如何保证公钥不被篡改？
+  将公钥放到数字证书中，只要证书可信，公钥就可信。
+  [wiki](https://zh.wikipedia.org/wiki/%E5%85%AC%E9%96%8B%E9%87%91%E9%91%B0%E8%AA%8D%E8%AD%89)Public key certificate，又称为 digital certificate.
+2. 公钥加密（非对称）计算量大，如何减少耗时？
+  每一次会话 session，客户端和服务端都会深成一个 session key，用它来加密信息，该对称加密运算非常快，而公钥只用来加密 session key 本身。
+
+
+
+
+
+
+
+## tcp keepalive
+[https://blog.csdn.net/lanyang123456/article/details/90578453](https://blog.csdn.net/lanyang123456/article/details/90578453)
+tcp 是面向连接，当两端都没有数据的接收和发送时，如何判断连接是否正常呢？
+
+```bash
+~$ cat /proc/sys/net/ipv4/tcp_keepalive_time
+7200
+```
+
+当两小时内此 socket 的任何一方都没有数据交换，tcp 就会自动发送存活检测探针，对方比相应，会出现下面三种情况：
+1. 对方接收一切正常：以期望的 ack 相应，2 小时后将发送另一个存活探针；
+2. 对方崩溃：以 RST 响应，socket 关闭；
+3. 对方无任何响应：暂略。
+
+## http 的幂等性
+[https://www.cnblogs.com/weidagang2046/archive/2011/06/04/idempotence.html](https://www.cnblogs.com/weidagang2046/archive/2011/06/04/idempotence.html)
+
+HTTP/1.1 规范中的幂等性定义：
+> Methods can also have the property of "idempotence" in that (aside from error or expiration issues) the side-effects of N > 0 identical requests is the same as for a single request.
+
+幂等性是指一次或多次请求，应该具有相同的副作用。比如 GET 方法用于获取资源，不应有副作用，如：
+
+```bash
+GET http://examlpexxxxx.com/xxxx.html
+```
+
+GET 方法并不会改变资源的状态，不论调用一次还是调用 N 次都没有副作用。注意，这里提到的是调用一次和 N 次的副作用相同，而不是每次请求的结果相同。
+GET 方法对一个资源的请求，可能会得到不同的结果，但本身没有产生副作用。
+
+DELETE 方法用于删除资源，是有副作用的，但也应该满足幂等性。
+
+```bash
+DELETE http://www.examlpexxxxx.com/article/6666
+```
+如上调用一次或多次的副作用都是相同的，即删除掉 6666 的帖子，因此调用者可以执行多次而无需担心。
+
+如下关注 POST 与 PUT 在幂等性上的区别：
+> The POST method is used to request that the origin server accept the entity enclosed in the request as a new subordinate of the resource identified by the Request-URI in the Request-Line ...... If a resource has been created on the origin server, the response SHOULD be 201 (Created) and contain an entity which describes the status of the request and refers to the new resource, and a Location header.
+
+POST 方法用于请求源服务器接收请求中包含的实体，作为请求行中标示的请求 URL 资源的新下属 。。。。
+
+
+> The PUT method requests that the enclosed entity be stored under the supplied Request-URI. If the Request-URI refers to an already existing resource, the enclosed entity SHOULD be considered as a modified version of the one residing on the origin server. If the Request-URI does not point to an existing resource, and that URI is capable of being defined as a new resource by the requesting user agent, the origin server can create the resource with that URI.
+
+### POST 与 GET
+links:
+1. https://www.cnblogs.com/hyddd/archive/2009/03/31/1426026.html
+2. https://www.zhihu.com/question/28586791
+3. https://stackoverflow.com/questions/630453/put-vs-post-in-rest
+4. https://blog.csdn.net/mad1989/article/details/7918267
+
+**对于 GET/POST 首先需要区分，是浏览器的使用场景，还是用 HTTP 作为接口传输协议的场景！**
+
+**浏览器中的场景：**即从 HTML 和浏览器诞生开始就有的 http 协议中的 POST/GET，浏览器使用 GET 请求来获取一个 html 页面/图片/js 等资源；用 POST 来提交一个 <form> 表单，并得到一个结果网页。
+
+GET 读取一个资源，反复的读取不会对访问的数据有副作用，这就是幂等性，因此也可在浏览器或 Server 端做缓存。
+
+POST 会随着浏览器中 submit 元素的点击，而让服务器去做一件事，这件事往往是有副作用，不幂等的，因此无法做缓存。
+
+GET 与 POST 携带数据的格式也有区别，浏览器中的 GET 只能由一个 url 所触发，所以 GET 之上的参数就只能依靠在 url 之上，但 http 协议本身并没有这个限制。
+
+**在接口中：**也就是 Postman 发出来的 GET 和 POST 请求，此时的 G/P 请求不只能用在前后端的交互之中，还能用在各个子服务的调用之中，也就是当作一种 RPC 协议使用。
+当 http 用作接口发送时就少了在浏览器当中的一些限制，只要符合 http 格式就可以发送：
+
+```bash
+<METHOD> <URL> HTTP/1.1\r\n
+<HEADER1>: <HEADER1VALUE>\r\n
+...
+\r\n
+<BODY DATA>
+```
+
+其中 method 可以时 GET 也可是 POST 或其他 http method，协议本身并没有限定 GET 一定不能没有 body，或 POST 不能将参数放置 url 中。虽然自由，但这就需要 client 与 server 端自行约定好。
+
+于是一系列的接口规范/风格诞生了，其中名气最大的是 **REST**。
+1. REST 约定 GET、POST、PUT、DELETE 分别用于获取、创建、替换和删除“资源”；
+2. REST 最佳实践还推荐使用 json 作为请求体；
+
+### REST
+[wiki](https://zh.wikipedia.org/wiki/%E8%A1%A8%E7%8E%B0%E5%B1%82%E7%8A%B6%E6%80%81%E8%BD%AC%E6%8D%A2)
+
+Representational State Transfer，表现层状态转换，是于 2000 年提出的万维网网络架构风格，**目的**是便于不同软件在网络中传递信息。
+REST 是根据 http 之上而确定的一组约束和属性。符合 REST 的网络服务，允许客户端发出以 uri 访问或操作网络资源的请求。 
+
+REST 是**设计风格**，而不是标准：
+1. 资源是由 uri 来指定；
+2. 对资源的操作包括获取、创建、修改和删除，这正好对应 http 协议提供的 GET、POST、PUT 和 DELETE 方法；
+3. 通过操作资源的表现形式来操作资源；
+4. 资源的表现形式可以是 XML、HTML 或 JSON。
+
+REST 架构风格最重要的 6 个**架构限制：**
+1. Client/Server：将客户端和服务端的关注点分离；
+2. 无状态 stateless：
+  - 服务器不能保存客户端信息，每一次从客户端的请求要包含必须的状态信息，会话信息由客户端保存，服务端根据这些状态来处理请求；
+  - 。。。
+3. 缓存；
+4. 接口统一：这是 REST 设计的基本出发点，减少了耦合性，可以让所有模块各自独立的进行改进；
+5. 分层系统；
+6. code-on-demand。
+
+[https://www.ruanyifeng.com/blog/2011/09/restful.html](https://www.ruanyifeng.com/blog/2011/09/restful.html)
+1. 资源 resource：就是网络上的一个实体，或者说网络上的一个具体信息；
+2. 表现层 represention：我们把资源具体呈现出来的形式，叫做它的表现层（比如说文本可以用 txt、html、xml 或是 json 格式表现）；
+3. 状态转化 state transfer：如果客户端想要操作服务器，必须通过某种手段，让服务器发生“状态转化“，而这种状态转换化是建立在表现层之上的，所以是表现层状态转化。
+
+综上的解释：
+1. 每一个 uri 代表一种资源；
+2. 客户端和服务端之间传递这种资源的某种表现层；
+3. 客户端通过四个 http 动词，对服务器进行操作，实现状态转化。
+
+
+
+
+## http ua 简介
+User-Agent 是 http header 的一部分，用于向所访问的网站提供你所使用的历览器类型及版本、操作系统类型及版本、浏览器内核等。通过该表示，网站将会像是不同的排版。
+
+
+## http 1 与 2 的区别
+
+
+
+## 当输入 url 回车后发生了什么
+[https://github.com/skyline75489/what-happens-when-zh_CN#url](https://github.com/skyline75489/what-happens-when-zh_CN#url)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

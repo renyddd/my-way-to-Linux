@@ -148,7 +148,7 @@ ref:
 
 bash 中的竖线就是**匿名管道**，是一种通过缓存完成的数据单向传输机制，并且要求两进程有亲缘关系。
 
-命名管道可通过 mkfifo 命令显示创建，成功创建后表现为一类型 p 的文件；进行输入后如不读取则相应进程会进入阻塞状态。
+**命名管道**可通过 mkfifo 命令显示创建，成功创建后表现为一类型 p 的文件；进行输入后如不读取则相应进程会进入阻塞状态。
 
 ### 消息队列
 
@@ -429,6 +429,26 @@ overlay 的不同层 layers 在 Linux 主机上表现为不同的目录，整个
 Open Container Initiative）维护规范，containerd 就使用 runc 来产生与运行容器；
 4. grpc 用于 containerd 和 docker-engine 间的通信；
 
+todo grpc
+
+
+## 容器编排
+[https://www.redhat.com/zh/topics/containers/what-is-container-orchestration](https://www.redhat.com/zh/topics/containers/what-is-container-orchestration)
+容器编排是指自动化容器的部署、管理、扩展和联网。
+
+## 服务网格 Service Mesh
+[https://jimmysong.io/blog/what-is-a-service-mesh/](https://jimmysong.io/blog/what-is-a-service-mesh/)
+> 服务网格是处理服务间通信的基础设施层。它负责构成现代云原生应用程序的复杂拓扑服务来可靠的交付请求。
+
+[https://www.redhat.com/zh/topics/microservices/what-is-a-service-mesh](https://www.redhat.com/zh/topics/microservices/what-is-a-service-mesh)
+
+## k8s controller manager
+[前面写的不错](https://fuckcloudnative.io/posts/a-deep-dive-into-kubernetes-controllers/)
+
+## k8s 面试题
+https://www.jianshu.com/p/2de643caefc1
+
+
 ## IaaS 与 PaaS 的区别？云计算中用到的虚拟化与容器？
 
 ## namespace 的种类？及延伸？
@@ -544,7 +564,7 @@ Pod 扮演的是传统部署环境里的“虚拟机”的角色（进程是以�
 5. kube-scheduler 通过他的 watcher 发觉还有一个新的 Pod 还没有绑定任何节点；
 6. kube-scheduler 为该 Pod 分配一个 Node 并且更新 API server；
 7. 这个更改将会传给 etcd，API server 还会将这个节点的分配，反映到 Pod 对象中；
-8. 每个 node 上都有 watcher 在监视 API server，因此目标节点监视到有一个新 Pod 被分配过来了；
+8. 每个 node 上都有 kubelet 在监视 API server，因此目标节点监视到有一个新 Pod 被分配过来了；
 9. Kubelet 运行容器并且向 API server 更新其状态；
 10. API server 将该 Pod 持久化存储至 etcd；
 11. 一旦 etcd 反馈写入成功，API server 便将该认可发送给 kubelet，表明这个事件已被接受。
@@ -560,7 +580,7 @@ Kubelet 通过一段描述 Pod 的 Json 或 Yaml 的 PodSpec 来工作，kubelet
 
 in-action 整理：
 1. 向 API server 创建 Node 资源并注册该节点；
-2. 持续监控 API server 是否该节点分配给 Pod 然后启动 Pod 容器；
+2. 持续监控 API server 是否给该节点分配了 Pod 然后启动 Pod 容器；
 3. 监控容器运行，持续报告状态、事件；
 4. 运行容器存活探针的组件，并且将负责重启容器。
 
