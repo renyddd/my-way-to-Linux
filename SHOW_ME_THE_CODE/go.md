@@ -71,7 +71,7 @@ slice 的空值并不是说它是一个空指针，而是说该 slice struct 中
 ## unsafe.Pointer
 [ref](https://www.cnblogs.com/qcrao-2018/p/10964692.html)
 
-go 的指针不能坐数学运算；
+go 的指针不能做数学运算；
 go 不同类型的指针不能相互转换；
 go 不同类型的指针不能 == 或 != 比较；
 go 不同类型的指针不能相互赋值。
@@ -169,7 +169,6 @@ func F() []int{
 func F() {
 	a := make([]int, 0, 20)
 	b := make([]int, 0, 20000)
-
 	l := 20
 	c := make([]int, 0, l)
 }

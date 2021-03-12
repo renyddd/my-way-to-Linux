@@ -12,6 +12,11 @@
 
 Linux 中无论是进程还是线程，在内核里都被统称为任务（Task），并由 task\_struct 进行管理。创建线程时使用 clone 系统调用，线程共享进程的数据结构；创建进程时使用 fork 系统调用，从此父子进程各用各的数据结构。
 
+[the-difference-between-fork-vfork-exec-and-clone](https://stackoverflow.com/questions/4856255/the-difference-between-fork-vfork-exec-and-clone)
+1. vfork 已是被废弃了的优化；
+2. 一般 fork 之后都是紧跟 exec 的，这将会毁掉现有的内存映射而重建，如今为了避免无用的内存复制，fork 使用写时复制的机制；
+3. clone 是 frok 所使用的系统调用。带有些参数，决定 clone 是创建线程还是进程的，是他们间共享了哪些数据结构。
+
 线程是调度的基本单位，而进程则是资源拥有的基本单位。所谓内核中的任务调度，实际上的调度对象是线程；而进程只是给线程提供了虚拟内存、全局变量等资源。所以可以这么理解：
 
 * 当进程只有一个线程时，可以认为进程就等于线程；
@@ -36,6 +41,8 @@ Linux 中无论是进程还是线程，在内核里都被统称为任务（Task�
 
 一个进程可由多个称为**线程**的执行单元组成，每个线程都运行在进程的上下文中，共享同样的代码和全局数据结构。
 
+### Linux 内核中深入了解 fork 与 clone 系统调用的区别
+todo
 
 ## 虚拟内存
 
@@ -100,6 +107,11 @@ todo：进程、虚拟内存全部根据 cs 书进行补充
 todo：例如 c 中，int 一个变量与 malloc 一个变量有何区别？在 go 当中呢？
 [ref - part1](https://deepu.tech/memory-management-in-programming/)
 [ref - part2](https://deepu.tech/memory-management-in-golang/)
+
+## 进程间转换图示
+[http://www.it.uu.se/education/course/homepage/os/vt18/module-4/implementing-threads/](http://www.it.uu.se/education/course/homepage/os/vt18/module-4/implementing-threads/)
+
+[https://student.cs.uwaterloo.ca/~cs350/W13/notes/proc.pdf](https://student.cs.uwaterloo.ca/~cs350/W13/notes/proc.pdf)
 
 ## goroutines
 [effective go](https://golang.org/doc/effective_go#goroutines)
@@ -234,7 +246,8 @@ com 是顶级域名，baidu 是二级域名，www 是三级域名。点（.）�
 
 * A 记录，用来把域名转换成 IP 地址；
 * CNAME 记录，用来创建别名；
-* NS 记录，表示该域名对应的域名服务器地址。
+* NS 记录，表示该域名对应的域名服务器地址；
+* MX 记录，邮箱。
 
 dig 的 trace 功能展示了递归查询的整个过程，
 
@@ -402,8 +415,35 @@ mmap
 todo
 
 ## Cgroup v1, v2?
-todo
+**todo**
 [https://chrisdown.name/talks/cgroupv2/cgroupv2-fosdem.pdf](https://chrisdown.name/talks/cgroupv2/cgroupv2-fosdem.pdf)
+
+> cgroupv2: Linux's new unified control group system
+- cgroup 就是 control group；
+- Linux 上的系统资源管理；
+- /sys/fs/cgroup 下的目录层级结构；
+- 资源、统计每一个 control group 限制；
+- 每种资源接口由 controller 提供；
+
+v1 cgroup 的每种资源都是层级结构的，每种资源层级下包含着这种资源的 cgroups：
+```bash
+% ls
+/sys/fs/cgroupcpu/ cpuacct/  cpuset/  devices/  freezer/memory/  net_cls/  pids/
+
+% find /sys/fs/cgroup/pids -type d
+/sys/fs/cgroup/pids/background.slice/sys/fs/cgroup/pids/background.slice/async.slice/sys/fs/cgroup/pids/workload.slice
+```
+
+v2 cgroup 是一个统一的层，每一个 cgroup 可支持多个资源域：
+```bash
+% ls /sys/fs/cgroup
+background.slice/  workload.slice/
+
+% ls /sys/fs/cgroup/background.slice
+async.slice/  foo.mount/  cgroup.subtree_controlmemory.high  memory.max  pids.current  pids.max
+```
+
+v2 中 cgroup 不再限制与一种资源中，资源对 cgroup 来说是可选的（是资源应用与 cgroup 的）。
 
 关注：
 1. How did this work in cgroupv1?
@@ -416,6 +456,8 @@ https://www.lijiaocn.com/%E6%8A%80%E5%B7%A7/2019/01/28/linux-tool-cgroup-detail.
 [how-the-overlay2-driver-works](https://docs.docker.com/storage/storagedriver/overlayfs-driver/#how-the-overlay2-driver-works)
 
 overlay 的不同层 layers 在 Linux 主机上表现为不同的目录，整个的统一过程可称为 union mount。底层目录称为 lowerdir，对应的 upperdir 和联合层 merged。
+
+todo：关注与 union fs 的区别。
 
 
 ## containerd withrunc
