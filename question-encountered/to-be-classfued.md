@@ -17,6 +17,13 @@ Linux 中无论是进程还是线程，在内核里都被统称为任务（Task�
 2. 一般 fork 之后都是紧跟 exec 的，这将会毁掉现有的内存映射而重建，如今为了避免无用的内存复制，fork 使用写时复制的机制；
 3. clone 是 frok 所使用的系统调用。带有些参数，决定 clone 是创建线程还是进程的，是他们间共享了哪些数据结构。
 
+[man ref](https://linux.die.net/man/2/clone) 可参看其后的编程例子，如需手动使用 clone 的时候，还需为子进程 malloc 栈空间，并使栈顶指针指向栈顶后在传入 child_stack。
+```c
+int clone(int (*fn)(void *), void *child_stack,
+          int flags, void *arg, ...
+          /* pid_t *ptid, struct user_desc *tls, pid_t *ctid */ );
+```
+
 线程是调度的基本单位，而进程则是资源拥有的基本单位。所谓内核中的任务调度，实际上的调度对象是线程；而进程只是给线程提供了虚拟内存、全局变量等资源。所以可以这么理解：
 
 * 当进程只有一个线程时，可以认为进程就等于线程；
@@ -299,6 +306,15 @@ kill -s SIGCHLD PARENT_PID
 Orphan Process，是指在其父进程（创建该进程的进程）执行完成或被终止后仍继续运行的一类进程。
 系统为避免孤儿进程退出时无法释放所占用的资源，systemd 进程会立马接管为其子进程。
 应用：如在 shell 上用户想是该进程与会话脱离，并转至后台运行，nohup 命令；或需要长时间启动的进程，即守护进程 daemon。
+
+### 细节
+https://monkeysayhi.github.io/2018/12/05/%E6%B5%85%E8%B0%88Linux%E5%83%B5%E5%B0%B8%E8%BF%9B%E7%A8%8B%E4%B8%8E%E5%AD%A4%E5%84%BF%E8%BF%9B%E7%A8%8B/
+
+所谓的 PCB 进程控制块，在 Linux 上就是指 task_struct。当进程退出后，所分配的绝大多数资源都被回收了，除了 task_struct 结构以及少数的资源。
+当进程结束，但 task_struct 还保留时就成为僵尸进程。
+保留 task_struct 的原因是，其中还存有进程的 pid、退出码等信息，父进程可能会关心这些信息，父进程便会通过 wait 调用等待子进程的退出并获取其退出信息。
+
+为什么说每个退出了的进程，都进过僵尸态？在子进程退出后，父进程未调用 wait 回收前，此时的子进程都保持为僵尸态。
 
 ## http 协议状态返回码
 
@@ -583,48 +599,6 @@ Docker 项目的核心原理就是为待创建的用户进程：
 ## 容器 vs VM
 VM 中的用户应用对宿主机操作系统的调用都会被虚拟化程序所拦截处理，这就多了一层消耗。
 
-## 理解 Pod
-Pod 扮演的是传统部署环境里的“虚拟机”的角色（进程是以组的形势运行的）。再把容器看作是运行在这个“机器”里的用户程序，凡是调度、网络、存储的事情进本都是 Pod 级别的。因此凡是跟容器的 Namespace 相关的属性，一定也是 Pod 级别的。
-
-若使用例如 deployment 控制器的话，其中 template 字段的内容与一个标准的 Pod 对应的 API 定义丝毫不差。
-
-[极客时间 - 深入剖析 Kubernetes](https://time.geekbang.org/column/article/40583)
-
-## k8s pod 的生命周期
-[kubernetes.io](https://kubernetes.io/zh/docs/concepts/workloads/pods/pod-lifecycle/)
-
-[DZone - Birth of a Pod](https://dzone.com/articles/kubernetes-lifecycle-of-a-pod)
-
-![pic](https://cdn-images-1.medium.com/max/1500/1*WDJmiyarVfcsDp6X1-lLFQ.png)
-
-导致 Pod 诞生的一系列事件：
-
-1. kubectl 或者其他任意的 API 客户端向 API server 提交 Pod spec；
-2. API server 将该 Pod object 写入 etcd；一旦写入成功，etcd 将会向 API server 发回认可；
-3. API server 反应 etcd 中的状态变化；
-4. 所有 k8s 组件都通过 watch 持续监视 API server 相关的变更；
-5. kube-scheduler 通过他的 watcher 发觉还有一个新的 Pod 还没有绑定任何节点；
-6. kube-scheduler 为该 Pod 分配一个 Node 并且更新 API server；
-7. 这个更改将会传给 etcd，API server 还会将这个节点的分配，反映到 Pod 对象中；
-8. 每个 node 上都有 kubelet 在监视 API server，因此目标节点监视到有一个新 Pod 被分配过来了；
-9. Kubelet 运行容器并且向 API server 更新其状态；
-10. API server 将该 Pod 持久化存储至 etcd；
-11. 一旦 etcd 反馈写入成功，API server 便将该认可发送给 kubelet，表明这个事件已被接受。
-
-[raft - Understandable Distributed Consensus](http://thesecretlivesofdata.com/)
-
-
-## kubelet 作用整理
-[ref - kubenetes.io](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kubelet/)
-
-Kubelet 是每个节点上运行的主要 node agent，并负责向 API Server 注册该节点。
-Kubelet 通过一段描述 Pod 的 Json 或 Yaml 的 PodSpec 来工作，kubelet 接受一组 API Server 下发的 PodSpec 并且确保这些 spec 中描述的容器健康的运行。
-
-in-action 整理：
-1. 向 API server 创建 Node 资源并注册该节点；
-2. 持续监控 API server 是否给该节点分配了 Pod 然后启动 Pod 容器；
-3. 监控容器运行，持续报告状态、事件；
-4. 运行容器存活探针的组件，并且将负责重启容器。
 
 ## ping 命令使用到的协议详解？
 todo

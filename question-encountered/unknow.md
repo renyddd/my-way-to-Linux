@@ -287,17 +287,6 @@ Linux 将物理 RAM 划分成内存块，并且称之为 pages。swapping 就是
 > In short, by enabling huge pages, the system has fewer page tables to deal with and hence less overhead to access/maintain them!
 
 
-## k8s device plugin
-todo
-[设备插件wiki](https://kubernetes.io/zh/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/)
-
-## 多 master 中各组件的选举机制
-todo
-
-## k8s Pod spec 更新冲突
-todo
-
-
 
 
 
